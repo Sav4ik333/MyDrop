@@ -30,6 +30,9 @@
       border-radius: 8px;
       text-align: center;
       padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .rarity-common { background-color: #4b5563; }
     .rarity-rare { background-color: #db2777; }
@@ -59,7 +62,7 @@
   <main class="flex flex-col items-center h-full px-4">
     <div class="bg-purple-800 p-6 rounded-xl shadow-xl text-center mt-12">
       <h2 class="text-2xl font-bold mb-4">Joker Case</h2>
-      <img src="case.png" alt="Кейс" class="w-24 h-24 mx-auto mb-4" />
+      <img src="case.webp" alt="Кейс" class="w-24 h-24 mx-auto mb-4" />
       <div class="flex gap-4 justify-center mb-4">
         <button class="bg-yellow-400 px-4 py-2 rounded text-purple-900" onclick="openCase('slow')">Открыть медленно</button>
         <button class="bg-yellow-400 px-4 py-2 rounded text-purple-900" onclick="openCase('fast')">Открыть быстро</button>
@@ -89,7 +92,117 @@
   </main>
 
   <script>
-    // JS остаётся без изменений, так как шанс уже убирается только из отображения
+    const balanceDisplay = document.getElementById("balanceDisplay");
+    const inventoryList = document.getElementById("inventoryList");
+    const bestDropDisplay = document.getElementById("bestDrop");
+    const scrollStrip = document.getElementById("scrollStrip");
+    const caseAnimation = document.getElementById("caseAnimation");
+    const dropResult = document.getElementById("dropResult");
+    const finalDrop = document.getElementById("finalDrop");
+    const userMenuBtn = document.getElementById("userMenuBtn");
+    const userMenu = document.getElementById("userMenu");
+
+    let balance = localStorage.getItem("balance") ? parseInt(localStorage.getItem("balance")) : 100;
+    let inventory = localStorage.getItem("inventory") ? JSON.parse(localStorage.getItem("inventory")) : [];
+    let bestDropValue = 0;
+
+    const drops = [
+      { name: "Nova | Хищник", price: 5, rarity: "common" },
+      { name: "AUG | Гроза", price: 9, rarity: "common" },
+      { name: "Galil AR | Холодный синтез", price: 15, rarity: "common" },
+      { name: "FAMAS | Мяу 36", price: 20, rarity: "rare" },
+      { name: "MP7 | Кровавый спорт", price: 130, rarity: "mythical" },
+    ];
+
+    function saveData() {
+      localStorage.setItem("balance", balance);
+      localStorage.setItem("inventory", JSON.stringify(inventory));
+    }
+
+    function updateBalance() {
+      balanceDisplay.textContent = `Баланс: ${balance}₽`;
+      saveData();
+    }
+
+    function updateInventory() {
+      inventoryList.innerHTML = "";
+      inventory.forEach((item, index) => {
+        const li = document.createElement("li");
+        li.innerHTML = `${item.name} (${item.price}₽)
+          <button onclick="withdrawItem(${index})" class="ml-2 text-xs bg-blue-500 px-1 rounded">Вывести</button>
+          <button onclick="sellItem(${index})" class="ml-1 text-xs bg-green-500 px-1 rounded">Продать</button>`;
+        inventoryList.appendChild(li);
+      });
+    }
+
+    function withdrawItem(index) {
+      inventory.splice(index, 1);
+      updateInventory();
+      saveData();
+      alert("Скин поставлен на вывод!");
+    }
+
+    function sellItem(index) {
+      balance += inventory[index].price;
+      inventory.splice(index, 1);
+      updateInventory();
+      updateBalance();
+    }
+
+    function openCase(mode) {
+      if (balance < 49) {
+        alert("Недостаточно средств!");
+        return;
+      }
+
+      balance -= 49;
+      updateBalance();
+
+      const drop = drops[Math.floor(Math.random() * drops.length)];
+      inventory.push(drop);
+      if (drop.price > bestDropValue) {
+        bestDropValue = drop.price;
+        bestDropDisplay.textContent = `${drop.name} (${drop.price}₽)`;
+      }
+      updateInventory();
+
+      if (mode === "fast") {
+        showDrop(drop);
+      } else {
+        scrollStrip.innerHTML = "";
+        for (let i = 0; i < 20; i++) {
+          const d = drops[Math.floor(Math.random() * drops.length)];
+          const card = document.createElement("div");
+          card.className = `drop-card rarity-${d.rarity}`;
+          card.textContent = d.name;
+          scrollStrip.appendChild(card);
+        }
+
+        caseAnimation.classList.remove("hidden");
+        dropResult.classList.add("hidden");
+
+        setTimeout(() => {
+          caseAnimation.classList.add("hidden");
+          showDrop(drop);
+        }, 3000);
+      }
+    }
+
+    function showDrop(drop) {
+      finalDrop.innerHTML = `
+        <div class="drop-card rarity-${drop.rarity} text-lg font-bold">
+          ${drop.name} (${drop.price}₽)
+          <button onclick="sellItem(inventory.length - 1)" class="ml-2 text-sm bg-green-500 px-2 py-1 rounded">Продать</button>
+        </div>`;
+      dropResult.classList.remove("hidden");
+    }
+
+    userMenuBtn.addEventListener("click", () => {
+      userMenu.classList.toggle("hidden");
+    });
+
+    updateBalance();
+    updateInventory();
   </script>
 </body>
 </html>
