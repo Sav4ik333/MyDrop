@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MyDrop</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes spin-case {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .spinning {
+      animation: spin-case 1s linear;
+    }
+  </style>
+</head>
+<body class="bg-purple-900 min-h-screen text-white font-sans">
+  <header class="flex items-center justify-between px-6 py-4">
+    <a href="/" class="text-3xl font-bold">
+      <span class="text-yellow-400">My</span><span class="text-white">Drop</span>
+    </a>
+    <div class="relative">
+      <div id="balanceDisplay" class="bg-green-500 text-white px-3 py-1 rounded text-lg">Баланс: 1000₽</div>
+      <button id="userMenuBtn" class="ml-4 bg-white text-purple-900 px-3 py-2 rounded hover:bg-yellow-400">Пользователь</button>
+      <div id="userMenu" class="absolute right-0 mt-2 w-64 bg-purple-800 rounded shadow-lg p-4 hidden z-10">
+        <h3 class="text-xl font-bold mb-2">Инвентарь</h3>
+        <ul id="inventoryList" class="text-sm mb-4"></ul>
+        <h3 class="text-xl font-bold mb-2">Лучший дроп</h3>
+        <p id="bestDrop" class="text-yellow-300">-</p>
+      </div>
+    </div>
+  </header>
+  <main class="flex flex-col items-center h-full px-4">
+    <div class="bg-purple-800 p-6 rounded-xl shadow-xl text-center mt-12">
+      <h2 class="text-2xl font-bold mb-4">Joker Case</h2>
+      <a href="#" id="openCaseBtn">
+        <img src="case.png" alt="Joker Case" class="w-64 h-auto mx-auto rounded-lg transition-transform duration-300" />
+      </a>
+      <p class="mt-4 text-xl">Цена: <span class="text-yellow-400">49₽</span></p>
+    </div>
+
+    <div class="bg-purple-800 mt-8 p-6 rounded-xl shadow-xl max-w-xl w-full text-center">
+      <h3 class="text-xl font-bold mb-2">Возможный дроп</h3>
+      <ul class="text-left text-sm space-y-2">
+        <li><span class="text-gray-300">Nova | Хищник</span> — 5₽, шанс 50%, обычная</li>
+        <li><span class="text-gray-300">AUG | Гроза</span> — 9₽, шанс 30%, обычная</li>
+        <li><span class="text-gray-300">Galil AR | Холодный синтез</span> — 15₽, шанс 8%, обычная</li>
+        <li><span class="text-pink-400">FAMAS | Мяу 36</span> — 20₽, шанс 9%, редкая</li>
+        <li><span class="text-red-500">MP7 | Кровавый спорт</span> — 130₽, шанс 1%, мифическая</li>
+      </ul>
+    </div>
+
+    <div id="dropResult" class="mt-8 hidden text-center">
+      <h3 class="text-xl font-bold mb-4">Вам выпал:</h3>
+      <img id="dropImage" src="" alt="Дроп" class="w-48 h-auto mx-auto rounded shadow-lg" />
+      <p id="dropName" class="mt-2 text-yellow-300 text-lg"></p>
+      <div class="flex justify-center space-x-4 mt-4">
+        <button id="sellBtn" class="bg-green-600 px-4 py-2 rounded hover:bg-green-500">Продать</button>
+        <button id="withdrawBtn" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-500">Вывести</button>
+      </div>
+      <p id="withdrawMessage" class="mt-4 text-sm text-green-300 hidden">Предмет выставлен на вывод.</p>
+    </div>
+  </main>
+  <script>
+    const items = [
+      { name: "Nova | Хищник", img: "nova.png", price: 5, chance: 50 },
+      { name: "AUG | Гроза", img: "aug.png", price: 9, chance: 30 },
+      { name: "Galil AR | Холодный синтез", img: "galil.png", price: 15, chance: 8 },
+      { name: "FAMAS | Мяу 36", img: "famas.png", price: 20, chance: 9 },
+      { name: "MP7 | Кровавый спорт", img: "mp7.png", price: 130, chance: 1 }
+    ];
+    const balanceDisplay = document.getElementById('balanceDisplay');
+    const openCaseBtn = document.getElementById('openCaseBtn');
+    const dropImage = document.getElementById('dropImage');
+    const dropName = document.getElementById('dropName');
+    const dropResult = document.getElementById('dropResult');
+    const sellBtn = document.getElementById('sellBtn');
+    const withdrawBtn = document.getElementById('withdrawBtn');
+    const withdrawMessage = document.getElementById('withdrawMessage');
+    const inventoryList = document.getElementById('inventoryList');
+    const bestDrop = document.getElementById('bestDrop');
+
+    const caseImage = openCaseBtn.querySelector("img");
+
+    function getUserData() {
+      return JSON.parse(localStorage.getItem('mydrop_user')) || { balance: 1000, inventory: [] };
+    }
+    function setUserData(data) {
+      localStorage.setItem('mydrop_user', JSON.stringify(data));
+    }
+    function updateBalanceDisplay() {
+      const data = getUserData();
+      balanceDisplay.textContent = `Баланс: ${data.balance}₽`;
+    }
+    function updateInventory() {
+      const data = getUserData();
+      inventoryList.innerHTML = '';
+      if (data.inventory.length === 0) {
+        inventoryList.innerHTML = '<li class="text-gray-400">Инвентарь пуст</li>';
+        bestDrop.textContent = '-';
+      } else {
+        data.inventory.forEach(item => {
+          const li = document.createElement('li');
+          li.textContent = `${item.name} (${item.price}₽)`;
+          inventoryList.appendChild(li);
+        });
+        const best = data.inventory.reduce((a, b) => a.price > b.price ? a : b);
+        bestDrop.textContent = `${best.name} (${best.price}₽)`;
+      }
+    }
+
+    document.getElementById('userMenuBtn').addEventListener('click', () => {
+      document.getElementById('userMenu').classList.toggle('hidden');
+      updateInventory();
+    });
+
+    openCaseBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      const data = getUserData();
+      if (data.balance < 49) return alert('Недостаточно средств!');
+      caseImage.classList.add('spinning');
+
+      setTimeout(() => {
+        let roll = Math.random() * 100;
+        let sum = 0;
+        let item = items[0];
+        for (let i = 0; i < items.length; i++) {
+          sum += items[i].chance;
+          if (roll <= sum) {
+            item = items[i];
+            break;
+          }
+        }
+        data.balance -= 49;
+        data.inventory.push(item);
+        setUserData(data);
+        updateBalanceDisplay();
+        dropImage.src = item.img;
+        dropName.textContent = item.name;
+        dropResult.classList.remove('hidden');
+        withdrawMessage.classList.add('hidden');
+        caseImage.classList.remove('spinning');
+      }, 1000);
+    });
+
+    sellBtn.addEventListener('click', () => {
+      const data = getUserData();
+      const lastItem = data.inventory.pop();
+      data.balance += lastItem.price;
+      setUserData(data);
+      updateBalanceDisplay();
+      updateInventory();
+      dropResult.classList.add('hidden');
+    });
+
+    withdrawBtn.addEventListener('click', () => {
+      withdrawMessage.classList.remove('hidden');
+    });
+
+    updateBalanceDisplay();
+    updateInventory();
+  </script>
+</body>
+</html>
