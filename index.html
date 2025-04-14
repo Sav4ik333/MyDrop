@@ -6,13 +6,34 @@
   <title>MyDrop</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    @keyframes spin-case {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    .scrolling-items {
+      display: flex;
+      overflow: hidden;
+      width: 100%;
+      height: 120px;
+      border: 2px solid #4c1d95;
+      border-radius: 1rem;
+      position: relative;
+      background: #1f1b3a;
     }
-    .spinning {
-      animation: spin-case 1s linear;
+    .item-strip {
+      display: flex;
+      animation: scroll-strip 3s ease-out forwards;
     }
+    @keyframes scroll-strip {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-70%); }
+    }
+    .drop-card {
+      min-width: 100px;
+      margin: 0 5px;
+      border-radius: 8px;
+      text-align: center;
+      padding: 4px;
+    }
+    .rarity-common { background-color: #4b5563; }
+    .rarity-rare { background-color: #db2777; }
+    .rarity-mythical { background-color: #b91c1c; }
   </style>
 </head>
 <body class="bg-purple-900 min-h-screen text-white font-sans">
@@ -20,12 +41,13 @@
     <a href="/" class="text-3xl font-bold">
       <span class="text-yellow-400">My</span><span class="text-white">Drop</span>
     </a>
-    <div class="relative">
-      <div id="balanceDisplay" class="bg-green-500 text-white px-3 py-1 rounded text-lg">Баланс: 1000₽</div>
-      <button id="userMenuBtn" class="ml-4 bg-white text-purple-900 px-3 py-2 rounded hover:bg-yellow-400">Пользователь</button>
+    <div class="relative flex items-center gap-3">
+      <div id="balanceDisplay" class="bg-green-500 text-white px-3 py-1 rounded text-lg">Баланс: 100₽</div>
+      <button class="bg-yellow-400 text-purple-900 px-2 py-1 rounded">+</button>
+      <button id="userMenuBtn" class="ml-2 bg-white text-purple-900 px-3 py-2 rounded hover:bg-yellow-400">Пользователь</button>
       <div id="userMenu" class="absolute right-0 mt-2 w-64 bg-purple-800 rounded shadow-lg p-4 hidden z-10">
         <h3 class="text-xl font-bold mb-2">Инвентарь</h3>
-        <ul id="inventoryList" class="text-sm mb-4"></ul>
+        <ul id="inventoryList" class="text-sm mb-4 space-y-2"></ul>
         <h3 class="text-xl font-bold mb-2">Лучший дроп</h3>
         <p id="bestDrop" class="text-yellow-300">-</p>
       </div>
@@ -34,9 +56,11 @@
   <main class="flex flex-col items-center h-full px-4">
     <div class="bg-purple-800 p-6 rounded-xl shadow-xl text-center mt-12">
       <h2 class="text-2xl font-bold mb-4">Joker Case</h2>
-      <a href="#" id="openCaseBtn">
-        <img src="case.png" alt="Joker Case" class="w-64 h-auto mx-auto rounded-lg transition-transform duration-300" />
-      </a>
+      <img src="case.png" alt="Кейс" class="w-32 h-32 mx-auto mb-4" />
+      <div class="flex gap-4 justify-center mb-4">
+        <button class="bg-yellow-400 px-4 py-2 rounded text-purple-900" onclick="openCase('slow')">Открыть медленно</button>
+        <button class="bg-yellow-400 px-4 py-2 rounded text-purple-900" onclick="openCase('fast')">Открыть быстро</button>
+      </div>
       <p class="mt-4 text-xl">Цена: <span class="text-yellow-400">49₽</span></p>
     </div>
 
@@ -51,40 +75,32 @@
       </ul>
     </div>
 
+    <div id="caseAnimation" class="scrolling-items mt-8 hidden">
+      <div class="item-strip" id="scrollStrip"></div>
+    </div>
+
     <div id="dropResult" class="mt-8 hidden text-center">
       <h3 class="text-xl font-bold mb-4">Вам выпал:</h3>
-      <img id="dropImage" src="" alt="Дроп" class="w-48 h-auto mx-auto rounded shadow-lg" />
-      <p id="dropName" class="mt-2 text-yellow-300 text-lg"></p>
-      <div class="flex justify-center space-x-4 mt-4">
-        <button id="sellBtn" class="bg-green-600 px-4 py-2 rounded hover:bg-green-500">Продать</button>
-        <button id="withdrawBtn" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-500">Вывести</button>
-      </div>
-      <p id="withdrawMessage" class="mt-4 text-sm text-green-300 hidden">Предмет выставлен на вывод.</p>
+      <div id="finalDrop"></div>
     </div>
   </main>
+
   <script>
     const items = [
-      { name: "Nova | Хищник", img: "nova.png", price: 5, chance: 50 },
-      { name: "AUG | Гроза", img: "aug.png", price: 9, chance: 30 },
-      { name: "Galil AR | Холодный синтез", img: "galil.png", price: 15, chance: 8 },
-      { name: "FAMAS | Мяу 36", img: "famas.png", price: 20, chance: 9 },
-      { name: "MP7 | Кровавый спорт", img: "mp7.png", price: 130, chance: 1 }
+      { name: "Nova | Хищник", img: "Nova.jpeg", price: 5, chance: 50, rarity: "common" },
+      { name: "AUG | Гроза", img: "aug.png", price: 9, chance: 30, rarity: "common" },
+      { name: "Galil AR | Холодный синтез", img: "Galil.png", price: 15, chance: 8, rarity: "common" },
+      { name: "FAMAS | Мяу 36", img: "Famas.png", price: 20, chance: 9, rarity: "rare" },
+      { name: "MP7 | Кровавый спорт", img: "MP7.png", price: 130, chance: 1, rarity: "mythical" }
     ];
-    const balanceDisplay = document.getElementById('balanceDisplay');
-    const openCaseBtn = document.getElementById('openCaseBtn');
-    const dropImage = document.getElementById('dropImage');
-    const dropName = document.getElementById('dropName');
-    const dropResult = document.getElementById('dropResult');
-    const sellBtn = document.getElementById('sellBtn');
-    const withdrawBtn = document.getElementById('withdrawBtn');
-    const withdrawMessage = document.getElementById('withdrawMessage');
-    const inventoryList = document.getElementById('inventoryList');
-    const bestDrop = document.getElementById('bestDrop');
 
-    const caseImage = openCaseBtn.querySelector("img");
+    const balanceDisplay = document.getElementById('balanceDisplay');
+    const scrollStrip = document.getElementById('scrollStrip');
+    const dropResult = document.getElementById('dropResult');
+    const finalDrop = document.getElementById('finalDrop');
 
     function getUserData() {
-      return JSON.parse(localStorage.getItem('mydrop_user')) || { balance: 1000, inventory: [] };
+      return JSON.parse(localStorage.getItem('mydrop_user')) || { balance: 100, inventory: [] };
     }
     function setUserData(data) {
       localStorage.setItem('mydrop_user', JSON.stringify(data));
@@ -95,14 +111,23 @@
     }
     function updateInventory() {
       const data = getUserData();
+      const inventoryList = document.getElementById('inventoryList');
+      const bestDrop = document.getElementById('bestDrop');
       inventoryList.innerHTML = '';
       if (data.inventory.length === 0) {
         inventoryList.innerHTML = '<li class="text-gray-400">Инвентарь пуст</li>';
         bestDrop.textContent = '-';
       } else {
-        data.inventory.forEach(item => {
+        data.inventory.forEach((item, index) => {
           const li = document.createElement('li');
-          li.textContent = `${item.name} (${item.price}₽)`;
+          li.className = 'flex justify-between items-center';
+          li.innerHTML = `
+            <span>${item.name} (${item.price}₽)</span>
+            <div class="space-x-1">
+              <button onclick="sellFromInventory(${index})" class="text-green-400 hover:underline">Продать</button>
+              <button onclick="alert('Предмет выставлен на вывод.')" class="text-blue-400 hover:underline">Вывести</button>
+            </div>
+          `;
           inventoryList.appendChild(li);
         });
         const best = data.inventory.reduce((a, b) => a.price > b.price ? a : b);
@@ -115,48 +140,76 @@
       updateInventory();
     });
 
-    openCaseBtn.addEventListener('click', function (e) {
-      e.preventDefault();
+    function pickDrop() {
+      const roll = Math.random() * 100;
+      let sum = 0;
+      for (const item of items) {
+        sum += item.chance;
+        if (roll <= sum) return item;
+      }
+      return items[0];
+    }
+
+    function openCase(speed) {
       const data = getUserData();
       if (data.balance < 49) return alert('Недостаточно средств!');
-      caseImage.classList.add('spinning');
 
+      data.balance -= 49;
+      setUserData(data);
+      updateBalanceDisplay();
+
+      const strip = scrollStrip;
+      strip.innerHTML = '';
+      document.getElementById('caseAnimation').classList.remove('hidden');
+      dropResult.classList.add('hidden');
+
+      const generated = [];
+      for (let i = 0; i < 20; i++) {
+        const item = items[Math.floor(Math.random() * items.length)];
+        generated.push(item);
+        const div = document.createElement('div');
+        div.className = `drop-card rarity-${item.rarity}`;
+        div.innerHTML = `<img src="${item.img}" class="w-20 h-20 mx-auto" /><p class="text-xs">${item.name}</p>`;
+        strip.appendChild(div);
+      }
+
+      const finalItem = pickDrop();
       setTimeout(() => {
-        let roll = Math.random() * 100;
-        let sum = 0;
-        let item = items[0];
-        for (let i = 0; i < items.length; i++) {
-          sum += items[i].chance;
-          if (roll <= sum) {
-            item = items[i];
-            break;
-          }
-        }
-        data.balance -= 49;
-        data.inventory.push(item);
+        data.inventory.push(finalItem);
         setUserData(data);
-        updateBalanceDisplay();
-        dropImage.src = item.img;
-        dropName.textContent = item.name;
+        document.getElementById('caseAnimation').classList.add('hidden');
+        finalDrop.innerHTML = `
+          <div class="drop-card rarity-${finalItem.rarity} inline-block p-4">
+            <img src="${finalItem.img}" class="w-24 h-24 mx-auto rounded" />
+            <p class="text-lg mt-2">${finalItem.name} (${finalItem.price}₽)</p>
+            <div class="flex justify-center space-x-4 mt-4">
+              <button class="bg-green-600 px-4 py-2 rounded hover:bg-green-500" onclick="sellItem(${finalItem.price})">Продать</button>
+              <button class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-500" onclick="alert('Предмет выставлен на вывод.')">Вывести</button>
+            </div>
+          </div>`;
         dropResult.classList.remove('hidden');
-        withdrawMessage.classList.add('hidden');
-        caseImage.classList.remove('spinning');
-      }, 1000);
-    });
+        updateInventory();
+      }, speed === 'slow' ? 3000 : 500);
+    }
 
-    sellBtn.addEventListener('click', () => {
+    function sellItem(price) {
       const data = getUserData();
-      const lastItem = data.inventory.pop();
-      data.balance += lastItem.price;
+      data.balance += price;
+      data.inventory.pop();
       setUserData(data);
       updateBalanceDisplay();
       updateInventory();
       dropResult.classList.add('hidden');
-    });
+    }
 
-    withdrawBtn.addEventListener('click', () => {
-      withdrawMessage.classList.remove('hidden');
-    });
+    function sellFromInventory(index) {
+      const data = getUserData();
+      data.balance += data.inventory[index].price;
+      data.inventory.splice(index, 1);
+      setUserData(data);
+      updateBalanceDisplay();
+      updateInventory();
+    }
 
     updateBalanceDisplay();
     updateInventory();
