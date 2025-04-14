@@ -7,15 +7,10 @@
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-purple-900 min-h-screen text-white font-sans">
-
-  <!-- Верхняя панель -->
   <header class="flex items-center justify-between px-6 py-4">
-    <!-- Логотип -->
     <a href="/" class="text-3xl font-bold">
       <span class="text-yellow-400">My</span><span class="text-white">Drop</span>
     </a>
-
-    <!-- Баланс и кнопка входа/профиля -->
     <div class="flex items-center space-x-4">
       <div id="balanceDisplay" class="bg-green-500 text-white px-3 py-1 rounded text-lg hidden">Баланс: 0₽</div>
       <button id="loginToggle" class="bg-white text-purple-900 px-4 py-2 rounded-lg font-medium hover:bg-yellow-400 transition">
@@ -23,77 +18,101 @@
       </button>
     </div>
   </header>
-
-  <!-- Основной контент -->
   <main class="flex flex-col items-center h-full px-4">
     <div id="welcome" class="text-center my-12">
       <h1 class="text-4xl">Добро пожаловать на MyDrop!</h1>
     </div>
-
-    <!-- Форма логина -->
     <div id="loginFormContainer" class="bg-purple-800 p-8 rounded-xl shadow-xl w-full max-w-md hidden mb-12">
       <h2 class="text-3xl font-bold mb-6 text-center">Вход в MyDrop</h2>
-
       <form id="loginForm" class="space-y-4">
         <div>
           <label class="block mb-1 text-white">Логин</label>
           <input type="text" name="username" class="w-full p-2 rounded bg-purple-700 text-white border border-purple-600" required />
         </div>
-
         <div>
           <label class="block mb-1 text-white">Пароль</label>
           <input type="password" name="password" class="w-full p-2 rounded bg-purple-700 text-white border border-purple-600" required />
         </div>
-
         <button type="submit" class="w-full bg-yellow-400 text-purple-900 py-2 rounded hover:bg-yellow-300 transition">Войти</button>
       </form>
     </div>
-
-    <!-- Кейс -->
     <div class="bg-purple-800 p-6 rounded-xl shadow-xl text-center">
       <h2 class="text-2xl font-bold mb-4">Nice Drop</h2>
-      <a href="/case-nice.html">
+      <a href="#" id="openCaseBtn">
         <img src="case.png" alt="Nice Drop Case" class="w-64 h-auto mx-auto rounded-lg hover:scale-105 transition-transform duration-300" />
       </a>
       <p class="mt-4 text-xl">Цена: <span class="text-yellow-400">49₽</span></p>
     </div>
+    <div id="dropResult" class="mt-8 hidden text-center">
+      <h3 class="text-xl font-bold mb-4">Вам выпал:</h3>
+      <img id="dropImage" src="" alt="Дроп" class="w-48 h-auto mx-auto rounded shadow-lg" />
+      <p id="dropName" class="mt-2 text-yellow-300 text-lg"></p>
+    </div>
   </main>
-
   <script>
+    const items = [
+      { name: "AK-47 | Redline", img: "ak_redline.png", price: 500 },
+      { name: "AWP | Asiimov", img: "awp_asiimov.png", price: 1200 },
+      { name: "P250 | Sand Dune", img: "p250_sand_dune.png", price: 5 }
+    ];
     const loginToggle = document.getElementById('loginToggle');
     const loginFormContainer = document.getElementById('loginFormContainer');
     const welcomeBlock = document.getElementById('welcome');
     const balanceDisplay = document.getElementById('balanceDisplay');
-
-    const userData = JSON.parse(localStorage.getItem('mydrop_user'));
+    function getUserData() {
+      return JSON.parse(localStorage.getItem('mydrop_user'));
+    }
+    function setUserData(data) {
+      localStorage.setItem('mydrop_user', JSON.stringify(data));
+    }
+    function updateBalanceDisplay() {
+      const data = getUserData();
+      if (data) {
+        balanceDisplay.textContent = `Баланс: ${data.balance}₽`;
+      }
+    }
+    const userData = getUserData();
     if (userData && userData.username) {
+      if (userData.balance === undefined) userData.balance = 100;
+      if (!Array.isArray(userData.inventory)) userData.inventory = [];
+      setUserData(userData);
       loginToggle.textContent = userData.username;
       loginToggle.classList.add('cursor-pointer');
-      loginToggle.addEventListener('click', () => {
-        window.location.href = '/profile.html';
-      });
-      balanceDisplay.textContent = 'Баланс: 100₽';
+      loginToggle.addEventListener('click', () => window.location.href = '/profile.html');
       balanceDisplay.classList.remove('hidden');
+      updateBalanceDisplay();
     } else {
       loginToggle.addEventListener('click', () => {
         loginFormContainer.classList.toggle('hidden');
         welcomeBlock.classList.toggle('hidden');
       });
     }
-
-    document.getElementById('loginForm').addEventListener('submit', function(e) {
+    document.getElementById('loginForm').addEventListener('submit', function (e) {
       e.preventDefault();
       const username = e.target.username.value;
       const password = e.target.password.value;
-
       if (username === 'G1farkus' && password === 'zxc12345') {
-        localStorage.setItem('mydrop_user', JSON.stringify({ username }));
+        const user = { username, balance: 100, inventory: [] };
+        setUserData(user);
         window.location.reload();
       } else {
         alert('Неверный логин или пароль');
       }
     });
+    document.getElementById('openCaseBtn').addEventListener('click', function (e) {
+      e.preventDefault();
+      const data = getUserData();
+      if (!data) return alert('Сначала войдите в аккаунт!');
+      if (data.balance < 49) return alert('Недостаточно средств!');
+      const item = items[Math.floor(Math.random() * items.length)];
+      data.balance -= 49;
+      data.inventory.push(item);
+      setUserData(data);
+      updateBalanceDisplay();
+      document.getElementById('dropImage').src = item.img;
+      document.getElementById('dropName').textContent = item.name;
+      document.getElementById('dropResult').classList.remove('hidden');
+    });
   </script>
-
 </body>
 </html>
